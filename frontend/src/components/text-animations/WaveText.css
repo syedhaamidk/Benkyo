@@ -1,0 +1,8 @@
+.wave-text {
+  display: inline-block;
+}
+
+.wave-text-char {
+  display: inline-block;
+  will-change: transform;
+}

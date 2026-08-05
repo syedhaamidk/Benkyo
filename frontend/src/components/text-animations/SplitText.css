@@ -1,0 +1,8 @@
+.split-text {
+  display: inline-block;
+}
+
+.split-text-char {
+  display: inline-block;
+  will-change: transform, opacity;
+}
