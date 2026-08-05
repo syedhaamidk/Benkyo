@@ -94,7 +94,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen w-full overflow-hidden p-4 gap-4">
+    <div className="flex flex-col lg:flex-row h-screen w-full max-w-2xl mx-auto overflow-hidden p-4 gap-4">
       {/* ── Left Sidebar: Document Manager ──────────────────────── */}
       <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
         {/* Upload Box */}
@@ -229,7 +229,7 @@ export default function Chat() {
                 <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent mb-4">
                   <MessageSquare size={26} />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">What would you like to learn today?</h3>
+                <h3 className="text-lg font-bold text-white mb-2">What are we studying today?</h3>
                 <p className="text-xs text-text-muted max-w-sm">
                   Upload your syllabus, lecture slides, or notes on the left, then ask any question.
                 </p>
@@ -248,7 +248,55 @@ export default function Chat() {
                       : 'bg-bg-card/90 border border-border/50 text-text-bright rounded-bl-none'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                  <div className="prose prose-invert max-w-none text-sm leading-relaxed">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
+                  {/* Confidence */}
+                  {msg.confidence && (
+                    <div className="mt-2 text-xs text-text-muted">
+                      <strong>Confidence:</strong> {msg.confidence}%
+                    </div>
+                  )}
+                  {/* Actions */}
+                  {msg.actions && msg.actions.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {msg.actions.map((action, i) => (
+                        <button key={i} className="px-3 py-1 text-xs bg-accent/20 text-accent rounded hover:bg-accent/30">
+                          {action}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {/* Explain Simply */}
+                  {msg.explainSimply && (
+                    <div className="mt-2 text-xs text-text-muted">
+                      <strong>Simple Explanation:</strong> {msg.explainSimply}
+                    </div>
+                  )}
+                  {/* Exam Answer */}
+                  {msg.examAnswer && (
+                    <div className="mt-2 text-xs text-text-muted">
+                      <strong>Exam Answer:</strong> {msg.examAnswer}
+                    </div>
+                  )}
+                  {/* Generate Quiz */}
+                  {msg.generateQuiz && (
+                    <div className="mt-2 text-xs text-text-muted">
+                      <strong>Quiz:</strong> {msg.generateQuiz}
+                    </div>
+                  )}
+                  {/* Generate Flashcards */}
+                  {msg.generateFlashcards && (
+                    <div className="mt-2 text-xs text-text-muted">
+                      <strong>Flashcards:</strong> {msg.generateFlashcards}
+                    </div>
+                  )}
+                  {/* Generate Notes */}
+                  {msg.generateNotes && (
+                    <div className="mt-2 text-xs text-text-muted">
+                      <strong>Notes:</strong> {msg.generateNotes}
+                    </div>
+                  )}
                 </div>
 
                 {/* Sources section for AI responses */}
