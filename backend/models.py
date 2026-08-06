@@ -20,6 +20,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 
 from database import Base
 
@@ -27,17 +28,27 @@ from database import Base
 # ---------------------------------------------------------------------------
 # Helper: store lists/dicts as JSON text
 # ---------------------------------------------------------------------------
-class JSONField(Text):
-    """Thin wrapper that serialises/deserialises to JSON automatically."""
+class JSONField(TypeDecorator):
+    """Thin wrapper around Text that serialises/deserialises to JSON automatically.
+
+    Must extend TypeDecorator (not Text directly) so SQLAlchemy actually
+    invokes process_bind_param / process_result_value on reads and writes.
+    """
+
+    impl = Text
+    cache_ok = True
 
     def process_bind_param(self, value, dialect):
         if value is not None:
-            return json.dumps(value)
+            return json.dumps(value, ensure_ascii=False)
         return value
 
     def process_result_value(self, value, dialect):
         if value is not None:
-            return json.loads(value)
+            try:
+                return json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                return value  # return as-is if already a Python object (legacy rows)
         return value
 
 

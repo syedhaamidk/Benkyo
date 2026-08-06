@@ -43,11 +43,26 @@ export default function Quiz() {
   }
 
   // Arrived via the Progress page's "Practice →" deep link (?topic=X) —
-  // generate a quiz for that topic right away instead of leaving the user
-  // to notice the field was prefilled and click Generate themselves.
+  // generate a quiz for that topic right away.
+  // MED-5: Capture initial topic from search params to avoid stale closure
   useEffect(() => {
-    if (searchParams.get('topic')) {
-      handleGenerate()
+    const initialTopic = searchParams.get('topic')
+    if (initialTopic) {
+      // Use current state values at mount time
+      const runInitialGenerate = async () => {
+        setLoading(true)
+        setError(null)
+        try {
+          const res = await generateQuiz(sessionId, { topic: initialTopic, difficulty, count })
+          setQuestions(res)
+        } catch (err) {
+          setError(err.message || 'Failed to generate quiz')
+          toast.error(err.message || 'Failed to generate quiz')
+        } finally {
+          setLoading(false)
+        }
+      }
+      runInitialGenerate()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -149,7 +164,7 @@ export default function Quiz() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-accent hover:bg-accent-dim disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {loading ? 'Generating...' : (<><Zap size={14} /> Generate Quiz</>)}
               </button>
@@ -223,7 +238,7 @@ export default function Quiz() {
                   const isSelected = answers[q.id] === optIdx
                   const isCorrect = q.correct === optIdx
 
-                  let btnStyle = 'bg-bg-base/70 border-border/50 text-text-body hover:border-accent/50'
+                  let btnStyle = 'bg-bg-base/70 border-border/50 text-text hover:border-accent/50'
 
                   if (submitted) {
                     if (isCorrect) {
@@ -273,7 +288,7 @@ export default function Quiz() {
             <button
               onClick={handleSubmitQuiz}
               disabled={Object.keys(answers).length < questions.length}
-              className="bg-accent hover:bg-accent-dim disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-xl text-base shadow-lg transition-colors cursor-pointer"
+              className="bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-xl text-base shadow-lg transition-colors cursor-pointer"
             >
               Submit Quiz Answers ({Object.keys(answers).length}/{questions.length})
             </button>

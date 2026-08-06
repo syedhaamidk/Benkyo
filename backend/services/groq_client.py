@@ -8,9 +8,9 @@ Never expose the key to the frontend — all Groq calls are backend-only.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-import time
 from typing import Any
 
 from groq import Groq, APIConnectionError, APIStatusError, APITimeoutError, RateLimitError
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Module-level Groq client (reuses HTTP connection pool)
 _client: Groq | None = None
 
-DEFAULT_MODEL = "openai/gpt-oss-120b"
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
 WHISPER_MODEL = "whisper-large-v3"
 
 # Requests hang the whole worker without this — 30s is generous for even a
@@ -52,29 +52,17 @@ def _get_client() -> Groq:
     return _client
 
 
-def chat(
+def _chat_sync(
     messages: list[dict[str, str]],
-    model: str = DEFAULT_MODEL,
-    temperature: float = 0.3,
-    max_tokens: int = 2048,
+    model: str,
+    temperature: float,
+    max_tokens: int,
 ) -> str:
     """
-    Send a chat completion request to Groq, retrying transient failures
-    (timeouts, connection errors, rate limits) with a short backoff.
-
-    Args:
-        messages:    OpenAI-style list of {role, content} dicts.
-        model:       Groq model identifier.
-        temperature: Sampling temperature.
-        max_tokens:  Maximum tokens in the response.
-
-    Returns:
-        The assistant message content as a plain string.
-
-    Raises:
-        GroqServiceError if Groq is unreachable/rate-limited/times out
-        after retries.
-        groq.APIStatusError for non-retryable errors (e.g. bad request).
+    Synchronous inner call to Groq with retry logic.
+    Must be called via asyncio.to_thread() from async endpoints so that
+    time.sleep() (here replaced by asyncio.sleep in the async wrapper)
+    does not block the event loop.
     """
     client = _get_client()
     logger.debug("Groq chat: model=%s, messages=%d", model, len(messages))
@@ -98,6 +86,9 @@ def chat(
                 attempt, MAX_RETRIES + 1, exc,
             )
             if attempt <= MAX_RETRIES:
+                # Blocking sleep — only safe here because _chat_sync is
+                # run inside asyncio.to_thread(), so the event loop is free.
+                import time
                 time.sleep(RETRY_BACKOFF_SECONDS * attempt)
                 continue
             raise GroqServiceError(
@@ -116,20 +107,38 @@ def chat(
     raise GroqServiceError("Groq request failed.") from last_error
 
 
-def transcribe_audio(audio_bytes: bytes, filename: str = "audio.webm") -> str:
+async def chat(
+    messages: list[dict[str, str]],
+    model: str = DEFAULT_MODEL,
+    temperature: float = 0.3,
+    max_tokens: int = 2048,
+) -> str:
     """
-    Transcribe audio using Groq's Whisper endpoint.
+    Send a chat completion request to Groq, retrying transient failures.
+
+    Runs the synchronous Groq SDK call in a thread pool via
+    asyncio.to_thread() so it never blocks the FastAPI event loop.
 
     Args:
-        audio_bytes: Raw audio file bytes (webm/mp4/wav/ogg).
-        filename:    Hint for the content-type detection.
+        messages:    OpenAI-style list of {role, content} dicts.
+        model:       Groq model identifier.
+        temperature: Sampling temperature.
+        max_tokens:  Maximum tokens in the response.
 
     Returns:
-        Transcribed text string.
+        The assistant message content as a plain string.
 
     Raises:
-        GroqServiceError if Groq is unreachable after retries.
+        GroqServiceError if Groq is unreachable/rate-limited/times out
+        after retries, or returns a non-retriable error.
     """
+    return await asyncio.to_thread(
+        _chat_sync, messages, model, temperature, max_tokens
+    )
+
+
+def _transcribe_sync(audio_bytes: bytes, filename: str) -> str:
+    """Synchronous inner transcription call — run via asyncio.to_thread()."""
     client = _get_client()
     last_error: Exception | None = None
     for attempt in range(1, MAX_RETRIES + 2):
@@ -143,6 +152,7 @@ def transcribe_audio(audio_bytes: bytes, filename: str = "audio.webm") -> str:
         except (APITimeoutError, APIConnectionError, RateLimitError) as exc:
             last_error = exc
             if attempt <= MAX_RETRIES:
+                import time
                 time.sleep(RETRY_BACKOFF_SECONDS * attempt)
                 continue
             raise GroqServiceError(
@@ -154,3 +164,22 @@ def transcribe_audio(audio_bytes: bytes, filename: str = "audio.webm") -> str:
             ) from exc
 
     raise GroqServiceError("Groq transcription failed.") from last_error
+
+
+async def transcribe_audio(audio_bytes: bytes, filename: str = "audio.webm") -> str:
+    """
+    Transcribe audio using Groq's Whisper endpoint.
+
+    Runs in a thread pool so it does not block the event loop.
+
+    Args:
+        audio_bytes: Raw audio file bytes (webm/mp4/wav/ogg).
+        filename:    Hint for the content-type detection.
+
+    Returns:
+        Transcribed text string.
+
+    Raises:
+        GroqServiceError if Groq is unreachable after retries.
+    """
+    return await asyncio.to_thread(_transcribe_sync, audio_bytes, filename)

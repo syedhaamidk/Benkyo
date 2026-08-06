@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useOutletContext, useNavigate } from 'react-router-dom'
 import {
   ResponsiveContainer,
@@ -25,7 +25,7 @@ export default function Progress() {
   const [stats, setStats] = useState({ history: [], overall_accuracy: 0, total_questions: 0 })
   const [error, setError] = useState(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -41,11 +41,11 @@ export default function Progress() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [sessionId, toast])
 
   useEffect(() => {
     fetchData()
-  }, [sessionId])
+  }, [fetchData])
 
   const handlePracticeTopic = (topicName) => {
     navigate(`/app/quiz?topic=${encodeURIComponent(topicName)}`)

@@ -122,7 +122,7 @@ async def ask(request: Request, body: AskRequest):
 
     # 5. Call Groq
     try:
-        answer = groq_chat(messages=messages, temperature=0.4, max_tokens=1024)
+        answer = await groq_chat(messages=messages, temperature=0.4, max_tokens=1024)
     except GroqServiceError as exc:
         logger.warning("Groq unavailable for /ask: %s", exc)
         raise HTTPException(status_code=503, detail=str(exc))

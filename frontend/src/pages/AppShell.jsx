@@ -4,20 +4,33 @@ import LineSidebar from '../components/ui/LineSidebar'
 import WaveText from '../components/text-animations/WaveText'
 import ShinyText from '../components/text-animations/ShinyText'
 import DecryptText from '../components/text-animations/DecryptText'
+import { Menu, X } from 'lucide-react'
 
 const NAV_ITEMS = ['Chat', 'Quiz', 'Flashcards', 'Notes', 'Progress']
 const NAV_PATHS = ['/app/chat', '/app/quiz', '/app/flashcards', '/app/notes', '/app/progress']
+
+// MIN-5: Per-route document titles
+const ROUTE_TITLES = {
+  '/app/chat': 'Chat — Benkyo',
+  '/app/quiz': 'Quiz — Benkyo',
+  '/app/flashcards': 'Flashcards — Benkyo',
+  '/app/notes': 'Notes — Benkyo',
+  '/app/progress': 'Progress — Benkyo',
+}
 
 export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Ensure session_id exists in sessionStorage
+  // UX-1: Mobile sidebar toggle
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // MED-3: Use localStorage instead of sessionStorage so data persists across tabs
   const [sessionId] = useState(() => {
-    let id = sessionStorage.getItem('benkyo_session_id')
+    let id = localStorage.getItem('benkyo_session_id')
     if (!id) {
       id = 'session_' + Math.random().toString(36).substring(2, 11)
-      sessionStorage.setItem('benkyo_session_id', id)
+      localStorage.setItem('benkyo_session_id', id)
     }
     return id
   })
@@ -26,16 +39,47 @@ export default function AppShell() {
   const activeIndex = NAV_PATHS.findIndex((path) => location.pathname.startsWith(path))
   const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0
 
+  // MIN-5: Update document title on route change
+  useEffect(() => {
+    const matchedPath = NAV_PATHS.find((path) => location.pathname.startsWith(path))
+    document.title = ROUTE_TITLES[matchedPath] || 'Benkyo — AI Study Assistant'
+  }, [location.pathname])
+
   const handleItemClick = (index) => {
     if (NAV_PATHS[index]) {
       navigate(NAV_PATHS[index])
+      setSidebarOpen(false) // close mobile sidebar on nav
     }
   }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text">
+      {/* UX-1: Mobile hamburger button */}
+      <button
+        className="fixed top-4 left-4 z-50 md:hidden bg-bg-card border border-border/50 rounded-lg p-2 text-white"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+      >
+        {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* UX-1: Overlay backdrop for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Left Sidebar Panel ─────────────────────────────────── */}
-      <aside className="w-64 flex-shrink-0 border-r border-border/40 bg-bg-base/90 flex flex-col justify-between p-6">
+      <aside
+        className={`
+          w-64 flex-shrink-0 border-r border-border/40 bg-bg-base/90 flex flex-col justify-between p-6
+          fixed md:relative z-40 h-full
+          transition-transform duration-200 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}
+      >
         <div>
           {/* Brand Header */}
           <div
@@ -94,7 +138,7 @@ export default function AppShell() {
       </aside>
 
       {/* ── Main Content Area ──────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0 bg-bg-secondary overflow-y-auto">
+      <main className="flex-1 flex flex-col min-w-0 bg-bg-secondary overflow-y-auto" role="main" aria-live="polite">
         <Outlet context={{ sessionId }} />
       </main>
     </div>

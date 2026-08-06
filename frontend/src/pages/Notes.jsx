@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { FileText, PenLine, AlertTriangle } from 'lucide-react'
+import { FileText, PenLine, AlertTriangle, Loader2 } from 'lucide-react'
 import GlassSurface from '../components/ui/GlassSurface'
 import ClickSpark from '../components/ui/ClickSpark'
 import { generateNotes, summarizeNotes } from '../api'
@@ -83,7 +83,7 @@ export default function Notes() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-accent hover:bg-accent-dim disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {loading ? 'Synthesizing...' : (<><PenLine size={14} /> Generate Notes</>)}
               </button>
@@ -122,6 +122,17 @@ export default function Notes() {
               <ReactMarkdown>{notesData.content}</ReactMarkdown>
             </div>
           </GlassSurface>
+        </div>
+      )}
+
+      {/* MED-6: Loading state */}
+      {loading && !notesData && (
+        <div className="w-full flex flex-col items-center justify-center py-16">
+          <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center mx-auto mb-4">
+            <Loader2 size={28} className="text-accent animate-spin" />
+          </div>
+          <p className="text-sm font-semibold text-white">Synthesizing study notes…</p>
+          <p className="text-xs text-text-muted mt-1">AI is analyzing your uploaded material</p>
         </div>
       )}
 

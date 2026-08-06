@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Layers, Sparkles, AlertTriangle, RotateCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Layers, Sparkles, AlertTriangle, RotateCw, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import GlassSurface from '../components/ui/GlassSurface'
 import ClickSpark from '../components/ui/ClickSpark'
 import { generateFlashcards } from '../api'
@@ -87,7 +87,7 @@ export default function Flashcards() {
             </label>
             <input
               type="range"
-              min="4"
+              min="2"
               max="15"
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
@@ -100,7 +100,7 @@ export default function Flashcards() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-accent hover:bg-accent-dim disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {loading ? 'Building Deck...' : (<><Sparkles size={14} /> Generate Deck</>)}
               </button>
@@ -193,7 +193,7 @@ export default function Flashcards() {
                     Answer / Definition
                   </span>
 
-                  <p className="text-base text-text-bright leading-relaxed px-4 my-auto">
+                  <p className="text-base text-white leading-relaxed px-4 my-auto">
                     {currentCard.back}
                   </p>
 
@@ -223,7 +223,7 @@ export default function Flashcards() {
             <button
               onClick={handleNext}
               disabled={currentIndex === cards.length - 1}
-              className="bg-bg-card hover:bg-bg-card/80 disabled:opacity-30 text-white px-5 py-2.5 rounded-xl border border-border/50 text-sm font-semibold transition-colors cursor-pointer flex items-center gap-1"
+              className="bg-black/20 hover:bg-black/40 disabled:opacity-30 text-white px-5 py-2.5 rounded-xl border border-gray-700 text-sm font-semibold transition-colors cursor-pointer flex items-center gap-1"
             >
               Next <ChevronRight size={16} />
             </button>
@@ -231,8 +231,19 @@ export default function Flashcards() {
         </div>
       )}
 
+      {/* MED-6: Loading state */}
+      {loading && !cards.length && (
+        <div className="w-full flex flex-col items-center justify-center py-16">
+          <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center mx-auto mb-4">
+            <Loader2 size={28} className="text-accent animate-spin" />
+          </div>
+          <p className="text-sm font-semibold text-white">Building your flashcard deck…</p>
+          <p className="text-xs text-text-muted mt-1">AI is generating cards from your study material</p>
+        </div>
+      )}
+
       {/* Empty State */}
-      {cards.length === 0 && !loading && (
+      {!cards.length && !loading && (
         <div className="my-16 text-center text-text-muted">
           <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center mx-auto mb-3 text-accent">
             <Layers size={28} />

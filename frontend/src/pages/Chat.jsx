@@ -1,11 +1,15 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useOutletContext } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
 import { Upload, FileText, MessageSquare, Loader2, AlertTriangle, Lightbulb, SendHorizontal } from 'lucide-react'
 import GlassSurface from '../components/ui/GlassSurface'
 import TypewriterText from '../components/text-animations/TypewriterText'
 import ShinyText from '../components/text-animations/ShinyText'
 import { useToast } from '../components/ui/Toast'
 import { uploadFiles, ask } from '../api'
+
+let _msgCounter = 0
+const nextMsgId = () => `msg_${Date.now()}_${++_msgCounter}`
 
 const PROMPT_EXAMPLES = [
   'Ask a question about your uploaded notes...',
@@ -34,9 +38,10 @@ export default function Chat() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // PERF-7: Only scroll when messages array changes, not on loading toggle
   useEffect(() => {
     scrollToBottom()
-  }, [messages, loading])
+  }, [messages])
 
   // Handle file drop / select
   const handleUpload = async (fileList) => {
@@ -72,14 +77,14 @@ export default function Chat() {
       content: m.text,
     }))
 
-    const newMsg = { id: Date.now(), sender: 'user', text: userQ }
+    const newMsg = { id: nextMsgId(), sender: 'user', text: userQ }
     setMessages((prev) => [...prev, newMsg])
     setLoading(true)
 
     try {
       const res = await ask(userQ, sessionId, history)
       const aiMsg = {
-        id: Date.now() + 1,
+        id: nextMsgId(),
         sender: 'ai',
         text: res.answer,
         sources: res.sources || [],
@@ -116,12 +121,12 @@ export default function Chat() {
             handleUpload(e.dataTransfer.files)
           }}
           onClick={() => {
-            const input = document.createElement('input')
-            input.type = 'file'
-            input.multiple = true
-            input.accept = '.pdf,.pptx,.docx,.txt,.md,.png,.jpg,.jpeg,.webp'
-            input.onchange = (e) => handleUpload(e.target.files)
-            input.click()
+            const fileInput = document.createElement('input')
+            fileInput.type = 'file'
+            fileInput.multiple = true
+            fileInput.accept = '.pdf,.pptx,.docx,.txt,.md,.png,.jpg,.jpeg,.webp'
+            fileInput.onchange = (ev) => handleUpload(ev.target.files)
+            fileInput.click()
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -141,11 +146,19 @@ export default function Chat() {
           </p>
 
           {uploading ? (
-            <div className="w-full bg-bg-base rounded-full h-1.5 overflow-hidden mt-2">
-              <div
-                className="bg-accent h-full transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
+            <div className="w-full mt-2">
+              <div className="w-full bg-bg-base rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-accent h-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              {/* MED-2: Show processing state after upload completes */}
+              {uploadProgress >= 100 && (
+                <p className="text-[10px] text-accent text-center mt-1 animate-pulse">
+                  Extracting text & building vector index…
+                </p>
+              )}
             </div>
           ) : (
             <span className="text-[11px] text-accent border border-accent/30 rounded px-2 py-0.5">
@@ -245,58 +258,12 @@ export default function Chat() {
                   className={`max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed ${
                     msg.sender === 'user'
                       ? 'bg-accent/90 text-white rounded-br-none shadow-lg'
-                      : 'bg-bg-card/90 border border-border/50 text-text-bright rounded-bl-none'
+                      : 'bg-bg-card/90 border border-border/50 text-white rounded-bl-none'
                   }`}
                 >
-                  <div className="prose prose-invert max-w-none text-sm leading-relaxed">
+                  <div className="prose-benkyo text-sm leading-relaxed">
                     <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
-                  {/* Confidence */}
-                  {msg.confidence && (
-                    <div className="mt-2 text-xs text-text-muted">
-                      <strong>Confidence:</strong> {msg.confidence}%
-                    </div>
-                  )}
-                  {/* Actions */}
-                  {msg.actions && msg.actions.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {msg.actions.map((action, i) => (
-                        <button key={i} className="px-3 py-1 text-xs bg-accent/20 text-accent rounded hover:bg-accent/30">
-                          {action}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {/* Explain Simply */}
-                  {msg.explainSimply && (
-                    <div className="mt-2 text-xs text-text-muted">
-                      <strong>Simple Explanation:</strong> {msg.explainSimply}
-                    </div>
-                  )}
-                  {/* Exam Answer */}
-                  {msg.examAnswer && (
-                    <div className="mt-2 text-xs text-text-muted">
-                      <strong>Exam Answer:</strong> {msg.examAnswer}
-                    </div>
-                  )}
-                  {/* Generate Quiz */}
-                  {msg.generateQuiz && (
-                    <div className="mt-2 text-xs text-text-muted">
-                      <strong>Quiz:</strong> {msg.generateQuiz}
-                    </div>
-                  )}
-                  {/* Generate Flashcards */}
-                  {msg.generateFlashcards && (
-                    <div className="mt-2 text-xs text-text-muted">
-                      <strong>Flashcards:</strong> {msg.generateFlashcards}
-                    </div>
-                  )}
-                  {/* Generate Notes */}
-                  {msg.generateNotes && (
-                    <div className="mt-2 text-xs text-text-muted">
-                      <strong>Notes:</strong> {msg.generateNotes}
-                    </div>
-                  )}
                 </div>
 
                 {/* Sources section for AI responses */}
@@ -363,7 +330,7 @@ export default function Chat() {
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
-                className="bg-accent hover:bg-accent-dim disabled:opacity-50 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Send
                 <SendHorizontal size={15} />

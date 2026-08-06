@@ -15,8 +15,10 @@ Response:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -40,12 +42,32 @@ SUPPORTED_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif",
 }
 
+# SEC-3: 50 MB max per file
+MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+
+
+# ---------------------------------------------------------------------------
+# SEC-2: Filename sanitisation
+# ---------------------------------------------------------------------------
+
+def _sanitize_filename(raw: str) -> str:
+    """Strip path separators, null bytes, and HTML from user-supplied filenames."""
+    # Remove path traversal
+    name = Path(raw).name
+    # Remove null bytes and control chars
+    name = re.sub(r"[\x00-\x1f\x7f]", "", name)
+    # Remove HTML-like tags
+    name = re.sub(r"<[^>]+>", "", name)
+    # Collapse whitespace
+    name = re.sub(r"\s+", " ", name).strip()
+    return name or "unnamed_file"
+
 
 # ---------------------------------------------------------------------------
 # Background: generate topic labels for a document via Groq
 # ---------------------------------------------------------------------------
 
-def _generate_topic_labels(document_id: int, combined_text: str) -> None:
+async def _generate_topic_labels(document_id: int, combined_text: str) -> None:
     """Run in the background after upload. Stores topic labels on the Document row."""
     from database import SessionLocal
 
@@ -58,7 +80,7 @@ def _generate_topic_labels(document_id: int, combined_text: str) -> None:
         'Example: ["Newton\'s Laws of Motion", "Thermodynamics", "Wave Optics"]'
     )
     try:
-        raw = groq_chat(
+        raw = await groq_chat(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Document excerpt:\n\n{truncated}"},
@@ -102,7 +124,8 @@ async def upload_files(
     results = []
 
     for upload in files:
-        filename = upload.filename or "unknown"
+        # SEC-2: Sanitise filename
+        filename = _sanitize_filename(upload.filename or "unknown")
         ext = Path(filename).suffix.lower()
 
         if ext not in SUPPORTED_EXTENSIONS:
@@ -111,9 +134,17 @@ async def upload_files(
                 detail=f"Unsupported file type: {ext!r}. Supported: {sorted(SUPPORTED_EXTENSIONS)}",
             )
 
+        # SEC-3: Read file with size check
+        file_bytes = await upload.read()
+        if len(file_bytes) > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File '{filename}' exceeds the 50 MB size limit.",
+            )
+
         # Save to a temp file so file-parsing libs can open it by path
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-            tmp.write(await upload.read())
+            tmp.write(file_bytes)
             tmp_path = Path(tmp.name)
 
         try:
@@ -163,7 +194,7 @@ async def upload_files(
             vectors = embeddings.embed(texts)
             vector_store.add_chunks(session_id, chunks, vectors)
 
-            # 6. Schedule topic-label generation
+            # 6. Schedule topic-label generation (now async)
             combined_text = "\n\n".join(p["text"] for p in raw_pages)
             background_tasks.add_task(
                 _generate_topic_labels, doc.id, combined_text
@@ -177,6 +208,8 @@ async def upload_files(
                     "chunk_count": len(chunks),
                 }
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.exception("Failed to process %s: %s", filename, exc)
             raise HTTPException(status_code=500, detail=f"Failed to process {filename}: {exc}")

@@ -7,23 +7,8 @@ const FALLOFF_CURVES = {
   sharp: p => p * p * p
 };
 
-const DEFAULT_ITEMS = [
-  'Overview',
-  'Components',
-  'Animations',
-  'Backgrounds',
-  'Showcase',
-  'Playground',
-  'Templates',
-  'Changelog',
-  'Community',
-  'Resources',
-  'Documentation',
-  'Support'
-];
-
 const LineSidebar = ({
-  items = DEFAULT_ITEMS,
+  items = [],
   accentColor = '#A855F7',
   textColor = '#c4c4c4',
   markerColor = '#6c6c6c',

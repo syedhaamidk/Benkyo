@@ -13,6 +13,7 @@ const ClickSpark = ({
   const canvasRef = useRef(null);
   const sparksRef = useRef([]);
   const startTimeRef = useRef(null);
+  const animationIdRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,9 +88,15 @@ const ClickSpark = ({
         ctx.stroke();
         return true;
       });
-      animationId = requestAnimationFrame(draw);
+      // PERF-3: Only continue the loop if there are active sparks
+      if (sparksRef.current.length > 0) {
+        animationId = requestAnimationFrame(draw);
+      } else {
+        animationIdRef.current = null;
+      }
     };
-    animationId = requestAnimationFrame(draw);
+    // Don't start the loop immediately — wait for a click
+    animationIdRef.current = null;
     return () => {
       cancelAnimationFrame(animationId);
     };
@@ -109,6 +116,40 @@ const ClickSpark = ({
       startTime: now
     }));
     sparksRef.current.push(...newSparks);
+    // PERF-3: Start the rAF loop if it's not already running
+    if (!animationIdRef.current) {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const draw = timestamp => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        sparksRef.current = sparksRef.current.filter(spark => {
+          const elapsed = timestamp - spark.startTime;
+          if (elapsed >= duration) return false;
+          const progress = elapsed / duration;
+          const eased = easeFunc(progress);
+          const distance = eased * sparkRadius * extraScale;
+          const lineLength = sparkSize * (1 - eased);
+          const x1 = spark.x + distance * Math.cos(spark.angle);
+          const y1 = spark.y + distance * Math.sin(spark.angle);
+          const x2 = spark.x + (distance + lineLength) * Math.cos(spark.angle);
+          const y2 = spark.y + (distance + lineLength) * Math.sin(spark.angle);
+          ctx.strokeStyle = sparkColor;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          return true;
+        });
+        if (sparksRef.current.length > 0) {
+          animationIdRef.current = requestAnimationFrame(draw);
+        } else {
+          animationIdRef.current = null;
+        }
+      };
+      animationIdRef.current = requestAnimationFrame(draw);
+    }
   };
 
   return (

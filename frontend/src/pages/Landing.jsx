@@ -63,7 +63,7 @@ export default function Landing() {
               delay={0.04}
               animateBy="words"
               direction="up"
-              className="text-lg text-text-body max-w-md"
+              className="text-lg text-text max-w-md"
             />
 
             {/* Primary CTA */}

@@ -17,10 +17,32 @@ from pydantic import BaseModel
 from services import embeddings, vector_store
 from rate_limiter import limiter
 from services.groq_client import chat as groq_chat, GroqServiceError
+from services.ai_utils import sanitize_topic_for_prompt
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/notes", tags=["notes"])
+
+
+# ─── Prompt constants ─────────────────────────────────────────────
+
+NOTES_SYSTEM_PROMPT = (
+    "You are Benkyo, an expert academic note taker. "
+    "Create structured, high-value study notes in GitHub Flavored Markdown format. "
+    "Do NOT write a brief summary; create comprehensive revision notes. "
+    "Include these sections:\n"
+    "# [Topic Title]\n"
+    "## 1. Core Concepts & Overview\n"
+    "## 2. Key Definitions & Terminology\n"
+    "## 3. Important Principles / Formulas / Steps\n"
+    "## 4. Key Takeaways & Exam Tips\n\n"
+    "Use bullet points, bold emphasis, and clean markdown layout."
+)
+
+SUMMARY_SYSTEM_PROMPT = (
+    "You are a concise study assistant. Write a clear, 1-paragraph summary "
+    "capturing the single most important takeaway from the material."
+)
 
 
 class GenerateNotesRequest(BaseModel):
@@ -40,7 +62,9 @@ async def generate_notes(request: Request, body: GenerateNotesRequest):
     if not vector_store.session_has_data(body.session_id):
         raise HTTPException(status_code=400, detail="No documents uploaded for this session.")
 
-    query = f"Complete study overview, key definitions, main theorems, formulas, concepts for {body.topic}"
+    safe_topic = sanitize_topic_for_prompt(body.topic)
+
+    query = f"Complete study overview, key definitions, main theorems, formulas, concepts for {safe_topic}"
     query_vec = embeddings.embed_one(query)
     chunks = vector_store.search(
         session_id=body.session_id,
@@ -54,31 +78,18 @@ async def generate_notes(request: Request, body: GenerateNotesRequest):
 
     context = "\n\n---\n\n".join(c["text"] for c in chunks[:8])
 
-    system_prompt = (
-        "You are Benkyo, an expert academic note taker. "
-        "Create structured, high-value study notes in GitHub Flavored Markdown format. "
-        "Do NOT write a brief summary; create comprehensive revision notes. "
-        "Include these sections:\n"
-        "# [Topic Title]\n"
-        "## 1. Core Concepts & Overview\n"
-        "## 2. Key Definitions & Terminology\n"
-        "## 3. Important Principles / Formulas / Steps\n"
-        "## 4. Key Takeaways & Exam Tips\n\n"
-        "Use bullet points, bold emphasis, and clean markdown layout."
-    )
-
-    user_prompt = f"Create structured study notes for '{body.topic}' based on these excerpts:\n\n{context[:6000]}"
+    user_prompt = f"Create structured study notes for '{safe_topic}' based on these excerpts:\n\n{context[:6000]}"
 
     try:
-        markdown_text = groq_chat(
+        markdown_text = await groq_chat(
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": NOTES_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
             max_tokens=2560,
         )
-        return NotesResponse(title=f"Study Notes: {body.topic}", content=markdown_text)
+        return NotesResponse(title=f"Study Notes: {safe_topic}", content=markdown_text)
     except GroqServiceError as exc:
         logger.warning("Groq unavailable for notes generation: %s", exc)
         raise HTTPException(status_code=503, detail=str(exc))
@@ -93,7 +104,9 @@ async def summarize_notes(request: Request, body: GenerateNotesRequest):
     if not vector_store.session_has_data(body.session_id):
         raise HTTPException(status_code=400, detail="No documents uploaded for this session.")
 
-    query = f"Summary of {body.topic}"
+    safe_topic = sanitize_topic_for_prompt(body.topic)
+
+    query = f"Summary of {safe_topic}"
     query_vec = embeddings.embed_one(query)
     chunks = vector_store.search(
         session_id=body.session_id,
@@ -107,23 +120,18 @@ async def summarize_notes(request: Request, body: GenerateNotesRequest):
 
     context = "\n\n".join(c["text"] for c in chunks[:5])
 
-    system_prompt = (
-        "You are a concise study assistant. Write a clear, 1-paragraph summary "
-        "capturing the single most important takeaway from the material."
-    )
-
     user_prompt = f"Summarize this material in one paragraph:\n\n{context[:4000]}"
 
     try:
-        summary_text = groq_chat(
+        summary_text = await groq_chat(
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
             max_tokens=512,
         )
-        return NotesResponse(title=f"Executive Summary: {body.topic}", content=summary_text)
+        return NotesResponse(title=f"Executive Summary: {safe_topic}", content=summary_text)
     except GroqServiceError as exc:
         logger.warning("Groq unavailable for summary generation: %s", exc)
         raise HTTPException(status_code=503, detail=str(exc))
