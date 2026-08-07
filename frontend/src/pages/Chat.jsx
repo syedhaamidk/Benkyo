@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { Upload, FileText, MessageSquare, Loader2, AlertTriangle, Lightbulb, SendHorizontal } from 'lucide-react'
+import { Upload, FileText, MessageSquare, AlertTriangle, Lightbulb, SendHorizontal } from 'lucide-react'
 import GlassSurface from '../components/ui/GlassSurface'
 import TypewriterText from '../components/text-animations/TypewriterText'
 import ShinyText from '../components/text-animations/ShinyText'
@@ -185,10 +185,11 @@ export default function Chat() {
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {uploadedDocs.map((doc) => (
+              {uploadedDocs.map((doc, i) => (
                 <div
                   key={doc.id}
-                  className="p-2.5 rounded-lg bg-bg-base/60 border border-border/30 flex items-center justify-between text-xs"
+                  className="p-2.5 rounded-lg bg-bg-base/60 border border-border/30 flex items-center justify-between text-xs animate-doc-in"
+                  style={{ animationDelay: `${Math.min(i, 8) * 0.06}s` }}
                 >
                   <div className="flex items-center gap-2 truncate">
                     <FileText size={14} className="text-accent flex-shrink-0" />
@@ -223,7 +224,7 @@ export default function Chat() {
           {/* Header */}
           <div className="px-6 py-4 border-b border-border/30 flex items-center justify-between flex-shrink-0 bg-bg-base/40">
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <h2 className="font-display text-base font-bold text-white flex items-center gap-2">
                 Coursework Q&A Assistant
               </h2>
               <p className="text-xs text-text-muted">
@@ -238,12 +239,32 @@ export default function Chat() {
           {/* Messages Scroll Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center text-text-muted my-auto py-12">
-                <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent mb-4">
+              <div className="relative h-full flex flex-col items-center justify-center text-center text-text-muted my-auto py-12 overflow-hidden">
+                {/* Subtle genkouyoushi grid + kanji watermark — echoes the hero,
+                    kept faint so it reads as texture, not a second focal point */}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-60"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px)',
+                    backgroundSize: '48px 48px',
+                    maskImage: 'radial-gradient(circle at 50% 45%, black 5%, transparent 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle at 50% 45%, black 5%, transparent 70%)',
+                  }}
+                />
+                <span
+                  className="absolute -right-4 -bottom-10 text-[220px] font-bold leading-none pointer-events-none select-none"
+                  style={{ color: 'rgba(255,255,255,0.02)' }}
+                  aria-hidden="true"
+                >
+                  勉
+                </span>
+
+                <div className="relative w-14 h-14 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent mb-4">
                   <MessageSquare size={26} />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">What are we studying today?</h3>
-                <p className="text-xs text-text-muted max-w-sm">
+                <h3 className="relative font-display text-lg font-bold text-white mb-2">What are we studying today?</h3>
+                <p className="relative text-xs text-text-muted max-w-sm">
                   Upload your syllabus, lecture slides, or notes on the left, then ask any question.
                 </p>
               </div>
@@ -294,9 +315,15 @@ export default function Chat() {
             ))}
 
             {loading && (
-              <div className="flex items-center gap-2 text-accent text-xs bg-bg-card/60 p-3 rounded-xl border border-border/30 w-fit">
-                <Loader2 size={14} className="animate-spin" />
-                Searching sources & generating response...
+              <div className="flex items-end gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-accent/15 border border-accent/35 flex items-center justify-center text-accent text-[11px] font-bold flex-shrink-0">
+                  勉
+                </div>
+                <div className="bg-bg-card/90 border border-border/40 rounded-2xl rounded-bl-none px-4 py-3.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-typing-dot" style={{ animationDelay: '0s' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-typing-dot" style={{ animationDelay: '0.15s' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-typing-dot" style={{ animationDelay: '0.3s' }} />
+                </div>
               </div>
             )}
 

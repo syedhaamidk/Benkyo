@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Particles from '../components/ui/Particles';
 import GlassSurface from '../components/ui/GlassSurface';
 import StarBorder from '../components/ui/StarBorder';
+import HeroFloatingCards from '../components/ui/HeroFloatingCards';
 
 import BlurText from '../components/text-animations/BlurText';
 
@@ -20,20 +21,26 @@ export default function Landing() {
     <div className="relative min-h-screen bg-bg-base overflow-x-hidden font-sans">
       {/* Hero Section */}
       <section className="relative flex items-center justify-center" style={{ height: '100vh' }}>
-        {/* Particles background */}
+        {/* Particles background — tuned up from defaults so the ambient field
+            is actually visible (was near-invisible at the original size/alpha) */}
         <div className="absolute inset-0 z-0">
           <Particles
-            particleCount={200}
+            particleCount={140}
             particleSpread={12}
-            speed={0.07}
+            speed={0.08}
             particleColors={['#A855F7', '#EC4899', '#6366F1', '#ffffff']}
             alphaParticles
-            particleBaseSize={80}
-            sizeRandomness={1.2}
-            cameraDistance={22}
+            particleBaseSize={170}
+            sizeRandomness={1.4}
+            cameraDistance={18}
+            moveParticlesOnHover
+            particleHoverFactor={0.6}
             className="w-full h-full"
           />
         </div>
+
+        {/* Floating cards illustrating the upload → AI → quiz pipeline */}
+        <HeroFloatingCards />
 
         {/* GlassSurface hero panel */}
         <div className="relative z-10 w-full flex justify-center px-4">
@@ -43,19 +50,14 @@ export default function Landing() {
             borderRadius={24}
             brightness={28}
             opacity={0.88}
-            blur={14}
+            blur={18}
+            backgroundOpacity={0.05}
             distortionScale={-160}
             className="p-8 md:p-12 flex flex-col items-center text-center gap-4"
             style={{ minHeight: 300, width: 'min(680px, 92vw)' }}
           >
-            {/* Badge */}
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-accent mb-1">
-              <Sparkles size={12} />
-              <span className="text-accent text-xs font-bold tracking-widest">Beta</span>
-            </span>
-
             {/* Title */}
-            <h1 className="text-5xl md:text-6xl font-extrabold text-white">Benkyo</h1>
+            <h1 className="gradient-text font-display text-5xl md:text-6xl font-extrabold leading-none">Benkyo</h1>
 
             {/* Subheading */}
             <BlurText
@@ -86,7 +88,7 @@ export default function Landing() {
 
       {/* Feature Cards */}
       <section className="py-16 px-6 max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-center text-white mb-4">
+        <h2 className="font-display text-3xl font-bold text-center text-white mb-4">
           Everything you need to study smarter
         </h2>
         <p className="text-center text-text-muted mb-8 max-w-xl mx-auto">
@@ -96,7 +98,12 @@ export default function Landing() {
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className="card p-6 hover:border-accent/40 hover:-translate-y-1 transition-all duration-300"
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                e.currentTarget.style.setProperty('--mx', `${e.clientX - rect.left}px`)
+                e.currentTarget.style.setProperty('--my', `${e.clientY - rect.top}px`)
+              }}
+              className="card spotlight-card p-6 hover:border-accent/40 hover:-translate-y-1 transition-all duration-300"
             >
               <h3 className="text-white font-semibold mb-2 text-lg">{f.title}</h3>
               <p className="text-text-muted text-sm leading-relaxed">{f.desc}</p>

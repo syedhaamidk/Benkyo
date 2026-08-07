@@ -7,6 +7,8 @@ import SplitText from '../components/text-animations/SplitText'
 import ShinyText from '../components/text-animations/ShinyText'
 import { generateQuiz, submitQuiz } from '../api'
 import { useToast } from '../components/ui/Toast'
+import CountUp from '../components/ui/CountUp'
+import ConfettiBurst from '../components/ui/ConfettiBurst'
 
 export default function Quiz() {
   const { sessionId } = useOutletContext()
@@ -106,7 +108,7 @@ export default function Quiz() {
     <div className="flex flex-col min-h-screen p-6 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+        <h1 className="font-display text-2xl font-extrabold text-white flex items-center gap-2">
           <Puzzle size={22} className="text-accent" /> Interactive Quiz Mode
         </h1>
         <p className="text-sm text-text-muted">
@@ -182,15 +184,24 @@ export default function Quiz() {
 
       {/* Score Reveal Header */}
       {submitted && scoreResult && (
-        <div className="mb-8 p-6 card border-accent/40 bg-accent/10 flex flex-col items-center justify-center text-center">
+        <div className="relative mb-8 p-6 card border-accent/40 bg-accent/10 flex flex-col items-center justify-center text-center overflow-visible">
+          {scoreResult.pct === 100 && <ConfettiBurst />}
           <span className="text-xs uppercase tracking-widest font-bold text-accent mb-1">Quiz Completed</span>
+          <CountUp
+            value={scoreResult.pct}
+            suffix="%"
+            duration={1200}
+            className="font-display text-5xl font-extrabold text-white tabular-nums"
+          />
           <SplitText
-            text={`You scored ${scoreResult.correct}/${scoreResult.total} (${scoreResult.pct}%)!`}
+            text={`${scoreResult.correct}/${scoreResult.total} correct`}
             delay={0.03}
-            className="text-3xl font-extrabold text-white"
+            className="text-sm text-text-muted mt-1"
           />
           <p className="text-xs text-text-muted mt-2 flex items-center gap-1.5">
-            {scoreResult.pct >= 80 ? (
+            {scoreResult.pct === 100 ? (
+              <><PartyPopper size={13} className="text-accent" /> Perfect score — this topic is locked in!</>
+            ) : scoreResult.pct >= 80 ? (
               <><PartyPopper size={13} className="text-accent" /> Excellent mastery of this topic!</>
             ) : scoreResult.pct >= 60 ? (
               <><ThumbsUp size={13} className="text-accent" /> Good progress! Review the explanations below.</>
@@ -198,6 +209,22 @@ export default function Quiz() {
               <><AlertTriangle size={13} className="text-yellow-500" /> Topic flagged for review in your Progress tab.</>
             )}
           </p>
+        </div>
+      )}
+
+      {/* Live progress bar while questions are still open */}
+      {questions.length > 0 && !submitted && (
+        <div className="mb-6 max-w-sm">
+          <div className="flex justify-between text-[11px] font-semibold text-text-muted mb-1.5">
+            <span>Answered</span>
+            <span><span className="text-accent">{Object.keys(answers).length}</span> / {questions.length}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-accent to-pink-500 transition-all duration-500 ease-out"
+              style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
+            />
+          </div>
         </div>
       )}
 

@@ -14,6 +14,7 @@ import GlassSurface from '../components/ui/GlassSurface'
 import ShinyText from '../components/text-animations/ShinyText'
 import { getWeakTopics, getStats } from '../api'
 import { useToast } from '../components/ui/Toast'
+import CountUp from '../components/ui/CountUp'
 
 export default function Progress() {
   const { sessionId } = useOutletContext()
@@ -56,7 +57,7 @@ export default function Progress() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+          <h1 className="font-display text-2xl font-extrabold text-white flex items-center gap-2">
             <BarChart3 size={22} className="text-accent" /> Weak Topics & Learning Analytics
           </h1>
           <p className="text-sm text-text-muted">
@@ -78,31 +79,40 @@ export default function Progress() {
         </div>
       )}
 
-      {/* Overview Cards */}
+      {/* Overview Cards — GlassSurface to match every other focal panel in the app */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="card p-5 flex flex-col justify-between">
+        <GlassSurface
+          width="100%" height="auto" borderRadius={16} brightness={25} opacity={0.9} blur={10}
+          className="p-5 flex flex-col justify-between" style={{ width: '100%' }}
+        >
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Overall Accuracy</span>
-          <div className="text-3xl font-extrabold text-white mt-2 mb-1">
-            {stats.overall_accuracy}%
+          <div className="font-display text-3xl font-extrabold text-white mt-2 mb-1 tabular-nums">
+            <CountUp value={stats.overall_accuracy} suffix="%" />
           </div>
           <span className="text-[11px] text-text-muted">Across all quiz attempts</span>
-        </div>
+        </GlassSurface>
 
-        <div className="card p-5 flex flex-col justify-between">
+        <GlassSurface
+          width="100%" height="auto" borderRadius={16} brightness={25} opacity={0.9} blur={10}
+          className="p-5 flex flex-col justify-between" style={{ width: '100%' }}
+        >
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Questions Attempted</span>
-          <div className="text-3xl font-extrabold text-accent mt-2 mb-1">
-            {stats.total_questions}
+          <div className="font-display text-3xl font-extrabold text-accent mt-2 mb-1 tabular-nums">
+            <CountUp value={stats.total_questions} />
           </div>
           <span className="text-[11px] text-text-muted">Logged in database</span>
-        </div>
+        </GlassSurface>
 
-        <div className="card p-5 flex flex-col justify-between">
+        <GlassSurface
+          width="100%" height="auto" borderRadius={16} brightness={25} opacity={0.9} blur={10}
+          className="p-5 flex flex-col justify-between" style={{ width: '100%' }}
+        >
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Weak Topics Flagged</span>
-          <div className="text-3xl font-extrabold text-pink-500 mt-2 mb-1">
-            {weakTopics.filter((t) => t.status === 'Needs Review').length}
+          <div className="font-display text-3xl font-extrabold text-pink-500 mt-2 mb-1 tabular-nums">
+            <CountUp value={weakTopics.filter((t) => t.status === 'Needs Review').length} />
           </div>
           <span className="text-[11px] text-text-muted">Accuracy below 60%</span>
-        </div>
+        </GlassSurface>
       </div>
 
       {/* Main Grid: Chart + Weak Topics */}

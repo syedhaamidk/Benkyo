@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { Layers, Sparkles, AlertTriangle, RotateCw, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import GlassSurface from '../components/ui/GlassSurface'
@@ -53,11 +53,35 @@ export default function Flashcards() {
     }
   }
 
+  const handleJumpTo = (idx) => {
+    if (idx === currentIndex) return
+    setIsFlipped(false)
+    setCurrentIndex(idx)
+  }
+
+  // Keyboard support: arrow keys to navigate, space/enter to flip
+  useEffect(() => {
+    if (!cards.length) return
+    const onKeyDown = (e) => {
+      if (['ArrowRight', 'ArrowLeft', ' '].includes(e.key)) {
+        // Avoid hijacking arrow keys while typing in the topic input
+        if (document.activeElement?.tagName === 'INPUT') return
+        e.preventDefault()
+      }
+      if (e.key === 'ArrowRight') handleNext()
+      else if (e.key === 'ArrowLeft') handlePrev()
+      else if (e.key === ' ') setIsFlipped((v) => !v)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards.length, currentIndex])
+
   return (
     <div className="flex flex-col min-h-screen p-6 max-w-4xl mx-auto w-full items-center">
       {/* Header */}
       <div className="w-full mb-6">
-        <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+        <h1 className="font-display text-2xl font-extrabold text-white flex items-center gap-2">
           <Layers size={22} className="text-accent" /> Active Recall Flashcards
         </h1>
         <p className="text-sm text-text-muted">
@@ -119,9 +143,24 @@ export default function Flashcards() {
       {/* Main Flashcard Container */}
       {cards.length > 0 && currentCard && (
         <div className="w-full max-w-lg flex flex-col items-center gap-6 my-4">
-          {/* Card Counter */}
-          <div className="text-xs text-text-muted font-mono uppercase tracking-widest bg-bg-card px-3 py-1 rounded-full border border-border/40">
-            Card {currentIndex + 1} of {cards.length}
+          {/* Card position — dot stepper, click to jump directly to a card */}
+          <div className="flex items-center gap-2" role="tablist" aria-label="Flashcard position">
+            {cards.map((_, idx) => (
+              <button
+                key={idx}
+                role="tab"
+                aria-selected={idx === currentIndex}
+                aria-label={`Go to card ${idx + 1}`}
+                onClick={() => handleJumpTo(idx)}
+                className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                  idx === currentIndex
+                    ? 'w-6 bg-accent'
+                    : idx < currentIndex
+                    ? 'w-2 bg-accent/40 hover:bg-accent/60'
+                    : 'w-2 bg-white/10 hover:bg-white/20'
+                }`}
+              />
+            ))}
           </div>
 
           {/* 3D Flip Card Area */}
@@ -164,7 +203,7 @@ export default function Flashcards() {
                     {currentCard.category || 'Front / Question'}
                   </span>
 
-                  <p className="text-xl font-bold text-white leading-snug px-4 my-auto">
+                  <p className="font-display text-xl font-bold text-white leading-snug px-4 my-auto">
                     {currentCard.front}
                   </p>
 
@@ -228,6 +267,12 @@ export default function Flashcards() {
               Next <ChevronRight size={16} />
             </button>
           </div>
+
+          <p className="text-[11px] text-text-muted/70 hidden sm:block">
+            Use <kbd className="px-1 py-0.5 rounded bg-white/5 border border-white/10 font-mono">←</kbd>{' '}
+            <kbd className="px-1 py-0.5 rounded bg-white/5 border border-white/10 font-mono">→</kbd> to navigate,{' '}
+            <kbd className="px-1 py-0.5 rounded bg-white/5 border border-white/10 font-mono">space</kbd> to flip
+          </p>
         </div>
       )}
 

@@ -16,6 +16,10 @@ export default function Notes() {
   const [loading, setLoading] = useState(false)
   const [notesData, setNotesData] = useState(null)
   const [error, setError] = useState(null)
+  // Bumped on every successful generate so the reveal animation below can key
+  // off it and replay — React otherwise reuses the same DOM node and the
+  // blur-in animation would only ever fire once.
+  const [revealKey, setRevealKey] = useState(0)
 
   const handleGenerate = async (e) => {
     e?.preventDefault()
@@ -28,6 +32,7 @@ export default function Notes() {
           ? await summarizeNotes(sessionId, { topic })
           : await generateNotes(sessionId, { topic })
       setNotesData(res)
+      setRevealKey((k) => k + 1)
     } catch (err) {
       setError(err.message || 'Failed to generate study notes')
       toast.error(err.message || 'Failed to generate study notes')
@@ -40,7 +45,7 @@ export default function Notes() {
     <div className="flex flex-col min-h-screen p-6 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+        <h1 className="font-display text-2xl font-extrabold text-white flex items-center gap-2">
           <FileText size={22} className="text-accent" /> Structured Study Notes
         </h1>
         <p className="text-sm text-text-muted">
@@ -101,7 +106,7 @@ export default function Notes() {
 
       {/* Notes Display Container */}
       {notesData && (
-        <div className="w-full mb-12">
+        <div key={revealKey} className="w-full mb-12 animate-notes-in">
           <GlassSurface
             width="100%"
             height="auto"
@@ -112,7 +117,7 @@ export default function Notes() {
             className="p-8 flex flex-col gap-6 border-accent/30"
           >
             <div className="flex items-center justify-between border-b border-border/30 pb-4">
-              <h2 className="text-xl font-bold text-white">{notesData.title}</h2>
+              <h2 className="font-display text-xl font-bold text-white">{notesData.title}</h2>
               <span className="text-xs text-accent font-semibold bg-accent/10 px-3 py-1 rounded-full border border-accent/30">
                 {mode === 'summary' ? 'Executive Summary' : 'Full Study Guide'}
               </span>
