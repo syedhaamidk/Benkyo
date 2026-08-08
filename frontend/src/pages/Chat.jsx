@@ -99,7 +99,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen w-full max-w-2xl mx-auto overflow-hidden p-4 gap-4">
+    <div className="flex flex-col lg:flex-row h-screen w-full max-w-7xl mx-auto overflow-hidden p-4 gap-4">
       {/* ── Left Sidebar: Document Manager ──────────────────────── */}
       <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
         {/* Upload Box */}

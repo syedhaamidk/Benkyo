@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import Particles from '../components/ui/Particles';
 import GlassSurface from '../components/ui/GlassSurface';
-import StarBorder from '../components/ui/StarBorder';
 import HeroFloatingCards from '../components/ui/HeroFloatingCards';
 
 import BlurText from '../components/text-animations/BlurText';
@@ -69,19 +68,12 @@ export default function Landing() {
             />
 
             {/* Primary CTA */}
-            <StarBorder
-              as="button"
-              color="#A855F7"
-              speed="5s"
-              thickness={1.5}
+            <button
               onClick={() => navigate('/app/chat')}
-              className="mt-4 cursor-pointer"
-              style={{ borderRadius: 12 }}
+              className="btn-primary mt-4 px-8 py-3 text-base flex items-center gap-1.5 cursor-pointer"
             >
-              <span className="px-8 py-3 text-base font-semibold text-white flex items-center gap-1.5">
-                Upload Notes <ArrowRight size={16} />
-              </span>
-            </StarBorder>
+              Upload Notes <ArrowRight size={16} />
+            </button>
           </GlassSurface>
         </div>
       </section>

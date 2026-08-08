@@ -53,10 +53,25 @@ body {
 
 /* ─── Utility: purple gradient text ────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #A855F7 0%, #EC4899 50%, #A855F7 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #A855F7 55%, #EC4899 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ─── Utility: primary gradient CTA button ──────────────────────── */
+.btn-primary {
+  background: linear-gradient(135deg, #A855F7, #7C3AED);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 12px;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.35);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 32px rgba(168, 85, 247, 0.5);
+  transform: translateY(-1px);
 }
 
 /* ─── Utility: glass card (non-SVG contexts) ────────────────────── */
